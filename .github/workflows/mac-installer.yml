@@ -41,8 +41,6 @@ jobs:
             sleep 2
           done
           test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = '1'
-          adb shell wm size 1080x2160
-          adb shell wm density 420
           adb shell input keyevent 82
           adb install "$RUNNER_TEMP/old.apk"
           adb shell pm grant cn.watchroom.pianike android.permission.POST_NOTIFICATIONS
@@ -152,6 +150,7 @@ jobs:
           wait_for 保存设置并同步 >/dev/null
           adb shell input keyevent KEYCODE_BACK
           tap 云同步
+          adb shell input swipe 160 530 160 280 420
           wait_for reveal >/dev/null
           if grep -Fq 'fixture43-code' "$RUNNER_TEMP/cloud.xml"; then exit 1; fi
           tap reveal
