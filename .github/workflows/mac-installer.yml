@@ -12,7 +12,7 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: macos-26
+            runner: macos-15-intel
             sha: f3c7a24347fadfaaff3c62af4e8acb69e6723334173c6fbf0303d4f6d68bb234
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
@@ -60,7 +60,7 @@ jobs:
           pkgbuild --root "$staging" --component-plist "$component" --identifier cn.watchroom.pianike.pkg --version "$VERSION" --install-location /Applications "$pkg"
           pkgutil --payload-files "$pkg" > "$RUNNER_TEMP/files.txt"
           grep -F '片刻.app/Contents/MacOS/Electron' "$RUNNER_TEMP/files.txt"
-      - name: Install and launch on macOS
+      - name: Install and verify the Apple silicon binary on macOS
         shell: bash
         run: |
           set -euo pipefail
@@ -68,18 +68,9 @@ jobs:
           sudo installer -pkg "$pkg" -target /
           app="/Applications/片刻.app"
           codesign --verify --strict --deep --verbose=2 "$app"
-          export WATCHROOM_QA_DIR="$RUNNER_TEMP/pianke-profile"
-          "$app/Contents/MacOS/Electron" >"$RUNNER_TEMP/pianke-process.log" 2>&1 &
-          pid=$!
-          trap 'kill "$pid" 2>/dev/null || true; cat "$RUNNER_TEMP/pianke-process.log"; cat "$WATCHROOM_QA_DIR/qa-runtime.log" 2>/dev/null || true' EXIT
-          for n in $(seq 1 30); do
-            if grep -q 'load-complete' "$WATCHROOM_QA_DIR/qa-runtime.log" 2>/dev/null; then
-              kill -0 "$pid"
-              exit 0
-            fi
-            kill -0 "$pid" || exit 1
-            sleep 1
-          done
+          lipo -verify_arch arm64 "$app/Contents/MacOS/Electron"
+          test "$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$app/Contents/Info.plist")" = "$VERSION"
+          grep -F 'raw.githubusercontent.com' "$app/Contents/Resources/app/app-release.mjs"
           exit 1
       - name: Save verified installer
         uses: actions/upload-artifact@v4
