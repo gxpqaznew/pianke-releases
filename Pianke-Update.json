@@ -1,50 +1,50 @@
 {
-  "tag_name": "v1.0.41",
+  "tag_name": "v1.0.42",
   "draft": false,
   "prerelease": false,
-  "body": "- 坚果云同步支持实时显示或隐藏正在输入的应用密码，并提示本机是否已保存应用密码。同步失败时保留正在编辑的内容。\n- 安卓发现新季、发现软件新版和覆盖安装完成后可显示系统通知。点新季通知直达「追更」，点软件通知直达「软件更新」。\n- 通知权限关闭时，可在对应页面一键打开系统授权。后台检查时间由安卓安排。",
+  "body": "- 修复安卓、Windows 和 Mac 在检查软件更新时遇到 GitHub 匿名接口限流的问题。\n- 现在从公开的版本清单读取更新。主入口失败时自动查备用入口，安装包仍沿用校验。\n- 旧版若查不到更新，可用此次安装包覆盖升级，保留片库和设置。",
   "assets": [
     {
       "name": "Pianke-Android.apk",
-      "size": 1455053,
-      "digest": "sha256:48e228a511d62db394d1757a607dd83a04890fa8ca5a41bc362d2243da3c8708",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.41/Pianke-Android.apk"
+      "size": 1455052,
+      "digest": "sha256:e5a0dec57fa1d328fae4731b3888de6e5895ad4dbc66d3d8c87ed152188aaf42",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.42/Pianke-Android.apk"
     },
     {
       "name": "Pianke-Windows-x64-Setup.exe",
-      "size": 150032232,
-      "digest": "sha256:552397a3122df955a6314efe7883518bf39118f54d87555b1ea49757c1dcfcf0",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.41/Pianke-Windows-x64-Setup.exe"
+      "size": 150032588,
+      "digest": "sha256:234c20703057e3a02be202c1ca018331a3067c4c4f98dd11e42855134cb7d892",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.42/Pianke-Windows-x64-Setup.exe"
     },
     {
       "name": "Pianke-Windows-x64-Portable.zip",
-      "size": 150386309,
-      "digest": "sha256:dfec785fa6c3f17d7290bddcb9e4a75db8974453ecf32fc712bb585161e29679",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.41/Pianke-Windows-x64-Portable.zip"
+      "size": 150386672,
+      "digest": "sha256:744604a7f4aca4c1e648b104922c907ad1b9d05f09ae9f214f65e8a6b7090046",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.42/Pianke-Windows-x64-Portable.zip"
     },
     {
       "name": "Pianke-macOS-arm64.pkg",
-      "size": 120097053,
-      "digest": "sha256:dc47be3c6a84b9379b6380f592e569e2ec67dc3abacf40801de2f8b2c451439d",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.41/Pianke-macOS-arm64.pkg"
+      "size": 120097259,
+      "digest": "sha256:15b024302af1202ad3e1ced777e905aee95bedc76cdceea7863c9c89c629ade2",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.42/Pianke-macOS-arm64.pkg"
     },
     {
       "name": "Pianke-macOS-x64.pkg",
-      "size": 123928363,
-      "digest": "sha256:936de1b386ddbaa50fb3ce0ae487a38d376e8c59f202c564f44a752f94ec0f17",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.41/Pianke-macOS-x64.pkg"
+      "size": 123929827,
+      "digest": "sha256:066c8d336b7b4112853f87384e8b2b1c1fadcdacb385250aa35ede6e600e04d0",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.42/Pianke-macOS-x64.pkg"
     },
     {
       "name": "Pianke-macOS-arm64.zip",
-      "size": 123593101,
-      "digest": "sha256:15a0582616d9e77e7778bf8cc40f86df76856e4fb358265f7d2d9bc3c13d3071",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.41/Pianke-macOS-arm64.zip"
+      "size": 123593522,
+      "digest": "sha256:f3c7a24347fadfaaff3c62af4e8acb69e6723334173c6fbf0303d4f6d68bb234",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.42/Pianke-macOS-arm64.zip"
     },
     {
       "name": "Pianke-macOS-x64.zip",
-      "size": 125701765,
-      "digest": "sha256:d94bea5945c0e6a24b608a24ad914d7259a27ee0029401aeca552e34c94213e1",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.41/Pianke-macOS-x64.zip"
+      "size": 125702186,
+      "digest": "sha256:0a1c83cf911421d261c7e4435d3070c44dac97fc0f8cfb5c3b96a960858d591a",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.42/Pianke-macOS-x64.zip"
     }
   ]
 }
