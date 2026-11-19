@@ -41,6 +41,8 @@ jobs:
             sleep 2
           done
           test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = '1'
+          adb shell wm size 1080x2160
+          adb shell wm density 420
           adb shell input keyevent 82
           adb install "$RUNNER_TEMP/old.apk"
           adb shell pm grant cn.watchroom.pianike android.permission.POST_NOTIFICATIONS
