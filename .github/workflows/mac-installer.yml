@@ -13,14 +13,14 @@ jobs:
         include:
           - arch: arm64
             runner: macos-15
-            sha: f3c7a24347fadfaaff3c62af4e8acb69e6723334173c6fbf0303d4f6d68bb234
+            sha: c44bf55ff278cd241609d15b4662955f16b4efc6a860419fefe03d7092ed2076
           - arch: x64
             runner: macos-15-intel
-            sha: 0a1c83cf911421d261c7e4435d3070c44dac97fc0f8cfb5c3b96a960858d591a
+            sha: d2c99ebabc942ef1af4acfa3bf5d7e0fbcd37c77d2cbc3ca748fa3d59cd37724
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     env:
-      VERSION: 1.0.42
+      VERSION: 1.0.43
       ARCH: ${{ matrix.arch }}
       SHA: ${{ matrix.sha }}
     steps:
@@ -97,11 +97,11 @@ jobs:
     timeout-minutes: 15
     env:
       RELEASE: https://github.com/gxpqaznew/pianke-releases/releases/download
-      VERSION: 1.0.42
-      PREVIOUS_VERSION: 1.0.41
-      APK_SHA: e5a0dec57fa1d328fae4731b3888de6e5895ad4dbc66d3d8c87ed152188aaf42
+      VERSION: 1.0.43
+      PREVIOUS_VERSION: 1.0.42
+      APK_SHA: 20e83723438f685886a876bbaab279f95a478fb413a24d6fd50d8892de4ace60
     steps:
-      - name: Boot Android 14, upgrade the installed app, and open its notification
+      - name: Upgrade Android and check the saved-password control
         shell: bash
         run: |
           set -euo pipefail
@@ -166,6 +166,74 @@ jobs:
           grep -Fq '检查软件更新' "$RUNNER_TEMP/screen.xml"
           grep -Fq '当前发布通道没有更新的版本。' "$RUNNER_TEMP/screen.xml"
           echo "The system notification opened the software update screen and the public manifest was read successfully."
+          screen() {
+            adb shell rm -f /sdcard/pianke-cloud.xml
+            adb shell uiautomator dump /sdcard/pianke-cloud.xml >/dev/null &&
+              adb pull /sdcard/pianke-cloud.xml "$RUNNER_TEMP/cloud.xml" >/dev/null 2>&1
+          }
+          locate() {
+            python3 - "$RUNNER_TEMP/cloud.xml" "$1" <<'PY'
+          import re
+          import sys
+          import xml.etree.ElementTree as ET
+          nodes = list(ET.parse(sys.argv[1]).iter("node"))
+          target = sys.argv[2]
+          if target in ("field-first", "field-second"):
+              fields = [node for node in nodes if node.get("class") == "android.widget.EditText"]
+              index = 0 if target == "field-first" else 1
+              node = fields[index] if len(fields) > index else None
+          else:
+              aliases = {"reveal": ("显示已保存密码", "显示密码"), "conceal": ("隐藏已保存密码", "隐藏")}
+              labels = aliases.get(target, (target,))
+              node = next((node for node in nodes if any(label in node.get("text","") or label in node.get("content-desc","") for label in labels)), None)
+          if node is None:
+              raise SystemExit(1)
+          left, top, right, bottom = map(int, re.findall(r"\d+", node.get("bounds","")))
+          print((left+right)//2, (top+bottom)//2)
+          PY
+          }
+          wait_for() {
+            local target="$1" point
+            for _ in $(seq 1 14); do
+              if screen && point=$(locate "$target"); then printf '%s\n' "$point"; return; fi
+              sleep 1
+            done
+            printf 'Cloud screen target missing: %s\n' "$target" >&2
+            return 1
+          }
+          tap() {
+            local x y
+            read -r x y <<< "$(wait_for "$1")"
+            adb shell input tap "$x" "$y"
+          }
+          hide_keyboard() {
+            local status
+            status=$(adb shell dumpsys input_method)
+            if [[ "$status" == *"mInputShown=true"* ]]; then adb shell input keyevent KEYCODE_BACK; fi
+          }
+          adb shell cmd connectivity airplane-mode enable
+          adb shell svc wifi disable
+          adb shell svc data disable
+          adb shell input keyevent KEYCODE_BACK
+          tap 云同步
+          tap field-first
+          adb shell input text 'pianke-fixture@example.test'
+          hide_keyboard
+          tap field-second
+          adb shell input text 'fixture43-code'
+          hide_keyboard
+          tap 连接并同步
+          wait_for 保存设置并同步 >/dev/null
+          adb shell input keyevent KEYCODE_BACK
+          tap 云同步
+          wait_for reveal >/dev/null
+          if grep -Fq 'fixture43-code' "$RUNNER_TEMP/cloud.xml"; then exit 1; fi
+          tap reveal
+          wait_for fixture43-code >/dev/null
+          tap conceal
+          wait_for reveal >/dev/null
+          if grep -Fq 'fixture43-code' "$RUNNER_TEMP/cloud.xml"; then exit 1; fi
+          echo "Android displayed and cleared the locally saved password."
 
 
 
