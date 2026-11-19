@@ -13,10 +13,10 @@ jobs:
         include:
           - arch: arm64
             runner: macos-15
-            sha: d424f249e09c0127db689bcc59e3d2806502f5fa2402b239589d0438ff9d4248
+            sha: 15a0582616d9e77e7778bf8cc40f86df76856e4fb358265f7d2d9bc3c13d3071
           - arch: x64
             runner: macos-15-intel
-            sha: b2413ffc17291e1d59ba523e8208e09aa44cac6959a60b65e6fcf261ddcd18be
+            sha: d94bea5945c0e6a24b608a24ad914d7259a27ee0029401aeca552e34c94213e1
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     env:
@@ -97,7 +97,7 @@ jobs:
     timeout-minutes: 15
     env:
       RELEASE: https://github.com/gxpqaznew/pianke-releases/releases/download
-      APK_SHA: ac7655e8217a312adfcced9a405ecbef26f7d3b1240829bdb7cb25065d3bb9d8
+      APK_SHA: 48e228a511d62db394d1757a607dd83a04890fa8ca5a41bc362d2243da3c8708
     steps:
       - name: Boot Android 14, upgrade the installed app, and open its notification
         shell: bash
@@ -105,9 +105,14 @@ jobs:
           set -euo pipefail
           sdk="$ANDROID_HOME"
           image="system-images;android-34;google_apis;x86_64"
+          export PATH="$sdk/platform-tools:$PATH"
+          export ANDROID_USER_HOME="$RUNNER_TEMP/android"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
           sudo chmod a+rw /dev/kvm
           "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "emulator" "platform-tools" "$image" > "$RUNNER_TEMP/sdk.log"
-          printf 'no\n' | "$sdk/cmdline-tools/latest/bin/avdmanager" create avd --name pianke-release --package "$image" --force
+          printf 'no\n' | "$sdk/cmdline-tools/latest/bin/avdmanager" create avd --name pianke-release --package "$image" --path "$ANDROID_AVD_HOME/pianke-release.avd" --force
+          "$sdk/emulator/emulator" -list-avds | grep -x 'pianke-release'
           export ANDROID_SERIAL=emulator-5554
           "$sdk/emulator/emulator" -avd pianke-release -port 5554 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/emu.log" 2>&1 &
           trap 'adb emu kill || true; tail -40 "$RUNNER_TEMP/emu.log"' EXIT
