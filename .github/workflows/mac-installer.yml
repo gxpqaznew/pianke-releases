@@ -39,12 +39,13 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier cn.watchroom.pianike" "$app/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$app/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$app/Contents/Info.plist"
+          # Sign standalone helpers first; framework main binaries are
+          # signed as part of their bundle, after the helpers inside it.
           while IFS= read -r -d '' item; do
-            if [[ "$(file -b "$item")" == *Mach-O* ]]; then
-              codesign --force --sign - "$item"
-              codesign --verify "$item"
-            fi
-          done < <(find "$app/Contents/Frameworks" -type f -print0)
+            printf 'Signing helper: %s\n' "$item"
+            codesign --force --sign - "$item"
+            codesign --verify "$item"
+          done < <(find "$app/Contents/Frameworks" -type f \( -name '*.dylib' -o -name '*.node' -o -name chrome_crashpad_handler -o -name ShipIt \) -print0)
           # The upstream arm64 binaries are ad-hoc signed and x64 binaries are
           # unsigned. Sign nested code before sealing the complete app.
           while IFS= read -r -d '' item; do
