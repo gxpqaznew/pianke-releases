@@ -12,9 +12,11 @@ jobs:
       matrix:
         include:
           - arch: arm64
+            seed_asset: 767856325
             runner: macos-15
             sha: c4f20db8529e74f475ad60075f0028f13277c716dca44ed65bf1bcb991721e92
           - arch: x64
+            seed_asset: 767856318
             runner: macos-15-intel
             sha: 59a2f5e7658682d26e2c8744ee47751493bca62b50adff20bd86dadd87ab3252
     runs-on: ${{ matrix.runner }}
@@ -27,13 +29,14 @@ jobs:
       - name: Download and repackage
         env:
           GH_TOKEN: ${{ github.token }}
+          SEED_ASSET: ${{ matrix.seed_asset }}
         shell: bash
         run: |
           set -euo pipefail
           zip="$RUNNER_TEMP/seed.zip"
           staging="$RUNNER_TEMP/staging"
           mkdir -p "$staging" "$RUNNER_TEMP/output"
-          gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" --pattern "Pianke-macOS-$ARCH.zip" --output "$zip"
+          gh api "repos/$GITHUB_REPOSITORY/releases/assets/$SEED_ASSET" -H "Accept: application/octet-stream" > "$zip"
           printf '%s  %s\n' "$SHA" "$zip" | shasum -a 256 -c
           ditto -x -k "$zip" "$RUNNER_TEMP/seed"
           app="$RUNNER_TEMP/seed/片刻.app"
@@ -89,4 +92,5 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
+
 
