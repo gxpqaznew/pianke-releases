@@ -1,0 +1,82 @@
+name: Build Mac installer
+on:
+  push:
+    branches: [codex/mac-installer]
+    paths: [.github/workflows/mac-installer.yml]
+permissions:
+  contents: read
+jobs:
+  installer:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+            sha: 0ea6e5d5f8093a67cc822ed2bae214a6352a52d43a500f7e5d119facd67c16d7
+          - arch: x64
+            runner: macos-15-intel
+            sha: b469dc2d3bd48a220014d0470d8a905a8c351a0ca04ed2492a5e436f6cd90d49
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    env:
+      VERSION: 1.0.39
+      ARCH: ${{ matrix.arch }}
+      SHA: ${{ matrix.sha }}
+    steps:
+      - name: Download and repackage
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip="$RUNNER_TEMP/seed.zip"
+          staging="$RUNNER_TEMP/staging"
+          mkdir -p "$staging" "$RUNNER_TEMP/output"
+          curl --fail --location --retry 3 "https://github.com/gxpqaznew/pianke-releases/releases/download/v$VERSION/Pianke-macOS-$ARCH.zip" --output "$zip"
+          printf '%s  %s\n' "$SHA" "$zip" | shasum -a 256 -c
+          ditto -x -k "$zip" "$RUNNER_TEMP/seed"
+          app="$RUNNER_TEMP/seed/片刻.app"
+          test -f "$app/Contents/Resources/app/package.json"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier cn.watchroom.pianike" "$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$app/Contents/Info.plist"
+          # The upstream arm64 binaries are ad-hoc signed and x64 binaries are
+          # unsigned. Sign nested code before sealing the complete app.
+          while IFS= read -r -d '' item; do
+            codesign --force --sign - "$item"
+          done < <(find "$app/Contents/Frameworks" -depth \( -name '*.app' -o -name '*.framework' -o -name '*.dylib' \) -type d -print0)
+          codesign --force --deep --sign - "$app"
+          codesign --verify --strict --deep --verbose=2 "$app"
+          ditto "$app" "$staging/片刻.app"
+          pkg="$RUNNER_TEMP/output/Pianke-macOS-$ARCH.pkg"
+          pkgbuild --root "$staging" --identifier cn.watchroom.pianike.pkg --version "$VERSION" --install-location /Applications "$pkg"
+          pkgutil --payload-files "$pkg" > "$RUNNER_TEMP/files.txt"
+          grep -F '片刻.app/Contents/MacOS/Electron' "$RUNNER_TEMP/files.txt"
+      - name: Install and launch on macOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg="$RUNNER_TEMP/output/Pianke-macOS-$ARCH.pkg"
+          sudo installer -pkg "$pkg" -target /
+          app="/Applications/片刻.app"
+          codesign --verify --strict --deep --verbose=2 "$app"
+          export WATCHROOM_QA_DIR="$RUNNER_TEMP/pianke-profile"
+          "$app/Contents/MacOS/Electron" >"$RUNNER_TEMP/pianke-process.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; cat "$RUNNER_TEMP/pianke-process.log"; cat "$WATCHROOM_QA_DIR/qa-runtime.log" 2>/dev/null || true' EXIT
+          for n in $(seq 1 30); do
+            if grep -q 'load-complete' "$WATCHROOM_QA_DIR/qa-runtime.log" 2>/dev/null; then
+              kill -0 "$pid"
+              exit 0
+            fi
+            kill -0 "$pid" || exit 1
+            sleep 1
+          done
+          exit 1
+      - name: Save verified installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pianke-macOS-${{ matrix.arch }}
+          path: ${{ runner.temp }}/output/*.pkg
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
