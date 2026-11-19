@@ -1,7 +1,7 @@
 name: Build Mac installer
 on:
   push:
-    branches: [codex/mac-installer]
+    branches: [codex/mac-installer-arm64]
     paths: [.github/workflows/mac-installer.yml]
 permissions:
   contents: read
@@ -12,11 +12,8 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: macos-15
+            runner: macos-26
             sha: f3c7a24347fadfaaff3c62af4e8acb69e6723334173c6fbf0303d4f6d68bb234
-          - arch: x64
-            runner: macos-15-intel
-            sha: 0a1c83cf911421d261c7e4435d3070c44dac97fc0f8cfb5c3b96a960858d591a
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     env:
@@ -92,81 +89,3 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
-  android-smoke:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      RELEASE: https://github.com/gxpqaznew/pianke-releases/releases/download
-      VERSION: 1.0.42
-      PREVIOUS_VERSION: 1.0.41
-      APK_SHA: e5a0dec57fa1d328fae4731b3888de6e5895ad4dbc66d3d8c87ed152188aaf42
-    steps:
-      - name: Boot Android 14, upgrade the installed app, and open its notification
-        shell: bash
-        run: |
-          set -euo pipefail
-          sdk="$ANDROID_HOME"
-          image="system-images;android-34;google_apis;x86_64"
-          export PATH="$sdk/platform-tools:$PATH"
-          export ANDROID_USER_HOME="$RUNNER_TEMP/android"
-          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
-          mkdir -p "$ANDROID_AVD_HOME"
-          sudo chmod a+rw /dev/kvm
-          "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "emulator" "platform-tools" "$image" > "$RUNNER_TEMP/sdk.log"
-          printf 'no\n' | "$sdk/cmdline-tools/latest/bin/avdmanager" create avd --name pianke-release --package "$image" --path "$ANDROID_AVD_HOME/pianke-release.avd" --force
-          "$sdk/emulator/emulator" -list-avds | grep -x 'pianke-release'
-          export ANDROID_SERIAL=emulator-5554
-          "$sdk/emulator/emulator" -avd pianke-release -port 5554 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/emu.log" 2>&1 &
-          trap 'adb emu kill || true; tail -40 "$RUNNER_TEMP/emu.log"' EXIT
-          curl -fsSLo "$RUNNER_TEMP/old.apk" "$RELEASE/v$PREVIOUS_VERSION/Pianke-Android.apk"
-          curl -fsSLo "$RUNNER_TEMP/new.apk" "$RELEASE/v$VERSION/Pianke-Android.apk"
-          printf '%s  %s\n' "$APK_SHA" "$RUNNER_TEMP/new.apk" | sha256sum -c
-          timeout 180 adb wait-for-device
-          for i in $(seq 1 90); do
-            if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = '1' ]; then break; fi
-            sleep 2
-          done
-          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = '1'
-          adb shell input keyevent 82
-          adb install "$RUNNER_TEMP/old.apk"
-          adb shell pm grant cn.watchroom.pianike android.permission.POST_NOTIFICATIONS
-          adb shell am start -W -n cn.watchroom.pianike/.MainActivity
-          adb shell input keyevent KEYCODE_HOME
-          adb install -r "$RUNNER_TEMP/new.apk"
-          for i in $(seq 1 20); do
-            adb shell dumpsys notification --noredact > "$RUNNER_TEMP/notifications.txt"
-            if grep -Fq '片刻已更新' "$RUNNER_TEMP/notifications.txt"; then break; fi
-            sleep 1
-          done
-          grep -F '片刻已更新' "$RUNNER_TEMP/notifications.txt"
-          grep -F "已安装片刻 $VERSION" "$RUNNER_TEMP/notifications.txt"
-          adb shell dumpsys jobscheduler > "$RUNNER_TEMP/jobs.txt"
-          grep -F 'cn.watchroom.pianike/.AppUpdateJob' "$RUNNER_TEMP/jobs.txt"
-          adb shell cmd statusbar expand-notifications
-          sleep 2
-          adb shell uiautomator dump /sdcard/pianke-shade.xml
-          adb pull /sdcard/pianke-shade.xml "$RUNNER_TEMP/shade.xml"
-          read -r x y < <(python3 - "$RUNNER_TEMP/shade.xml" <<'PY'
-          import re
-          import sys
-          import xml.etree.ElementTree as ET
-          root = ET.parse(sys.argv[1])
-          node = next(node for node in root.iter("node") if "片刻已更新" in node.get("text","") or "片刻已更新" in node.get("content-desc",""))
-          left, top, right, bottom = map(int, re.findall(r"\d+", node.get("bounds","")))
-          print((left+right)//2,(top+bottom)//2)
-          PY
-          )
-          adb shell input tap "$x" "$y"
-          for i in $(seq 1 8); do
-            adb shell uiautomator dump /sdcard/pianke-screen.xml || true
-            adb pull /sdcard/pianke-screen.xml "$RUNNER_TEMP/screen.xml" || true
-            if grep -Fq '当前发布通道没有更新的版本。' "$RUNNER_TEMP/screen.xml"; then break; fi
-            sleep 2
-          done
-          grep -Fq '检查软件更新' "$RUNNER_TEMP/screen.xml"
-          grep -Fq '当前发布通道没有更新的版本。' "$RUNNER_TEMP/screen.xml"
-          echo "The system notification opened the software update screen and the public manifest was read successfully."
-
-
-
-
