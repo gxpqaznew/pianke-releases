@@ -55,7 +55,12 @@ jobs:
           codesign --verify --strict --deep --verbose=2 "$app"
           ditto "$app" "$staging/片刻.app"
           pkg="$RUNNER_TEMP/output/Pianke-macOS-$ARCH.pkg"
-          pkgbuild --root "$staging" --identifier cn.watchroom.pianike.pkg --version "$VERSION" --install-location /Applications "$pkg"
+          # Pin the target directory and avoid macOS relocating it to a
+          # different Electron-derived app it finds on the same volume.
+          component="$RUNNER_TEMP/component.plist"
+          pkgbuild --analyze --root "$staging" "$component"
+          /usr/libexec/PlistBuddy -c 'Set :0:BundleIsRelocatable false' "$component"
+          pkgbuild --root "$staging" --component-plist "$component" --identifier cn.watchroom.pianike.pkg --version "$VERSION" --install-location /Applications "$pkg"
           pkgutil --payload-files "$pkg" > "$RUNNER_TEMP/files.txt"
           grep -F '片刻.app/Contents/MacOS/Electron' "$RUNNER_TEMP/files.txt"
       - name: Install and launch on macOS
@@ -87,6 +92,7 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
+
 
 
 
