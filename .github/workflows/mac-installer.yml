@@ -39,12 +39,15 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier cn.watchroom.pianike" "$app/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$app/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$app/Contents/Info.plist"
+          while IFS= read -r -d '' item; do
+            if file -b "$item" | grep -q 'Mach-O'; then codesign --force --sign - "$item"; fi
+          done < <(find "$app/Contents/Frameworks" -type f \( -perm -100 -o -name '*.dylib' -o -name '*.node' \) -print0)
           # The upstream arm64 binaries are ad-hoc signed and x64 binaries are
           # unsigned. Sign nested code before sealing the complete app.
           while IFS= read -r -d '' item; do
             codesign --force --sign - "$item"
           done < <(find "$app/Contents/Frameworks" -depth \( -name '*.app' -o -name '*.framework' -o -name '*.dylib' \) -type d -print0)
-          codesign --force --deep --sign - "$app"
+          codesign --force --sign - "$app"
           codesign --verify --strict --deep --verbose=2 "$app"
           ditto "$app" "$staging/片刻.app"
           pkg="$RUNNER_TEMP/output/Pianke-macOS-$ARCH.pkg"
