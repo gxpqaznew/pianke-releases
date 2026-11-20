@@ -107,7 +107,7 @@ jobs:
               const fixture='fixture-password-145';
               await waitFor(()=>window.Watchroom?.platform==='mac','Mac preload is missing');
               if(mode==='reload'){setTimeout(()=>location.reload(),150);return 'Reopening settings';}
-    if(mode==='seed'){
+              if(mode==='seed'){
                 const status=await window.Watchroom.cloud('configure',{username:account,password:fixture,enabled:false});
                 if(!status.configured||status.username!==account)throw Error('existing version failed to save the encrypted fixture');
                 return 'Saved the fixture using macOS Keychain';
