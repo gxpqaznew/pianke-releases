@@ -1,0 +1,98 @@
+name: Test Mac in-app restart
+on:
+  push:
+    branches: [codex/mac-updater-smoke]
+    paths: [.github/workflows/mac-updater-smoke.yml]
+permissions:
+  contents: read
+jobs:
+  update:
+    runs-on: macos-15-intel
+    timeout-minutes: 10
+    steps:
+      - name: Replace the running app using Electron and a test-only signing identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d "$RUNNER_TEMP/pianke-update.XXXXXXXX")"
+          keychain="$root/fixture.keychain-db"
+          cert="$root/fixture.pem"
+          key="$root/fixture.key"
+          identity="Pianke Native Update QA"
+          export PIKE_QA_DIR="$root"
+          trap 'security delete-keychain "$keychain" 2>/dev/null || true; cat "$root/check.log" 2>/dev/null || true' EXIT
+          pkg="$root/seed.pkg"
+          curl -fsSL --retry 3 --output "$pkg" https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.43/Pianke-macOS-x64.pkg
+          printf "%s  %s\n" ae73b414e64949fcfe582225c6e8265558231ed61aef3493b55cbd2a828bbf27 "$pkg" | shasum -a 256 -c
+          pkgutil --expand-full "$pkg" "$root/seed"
+          seed=$(find "$root/seed" -type d -name '片刻.app' -print -quit)
+          test -n "$seed"
+          openssl req -x509 -nodes -newkey rsa:2048 -sha256 -days 2 -subj "/CN=$identity" -addext 'keyUsage=critical,digitalSignature' -addext 'extendedKeyUsage=codeSigning' -keyout "$key" -out "$cert"
+          password="$(openssl rand -hex 24)"
+          openssl pkcs12 -export -inkey "$key" -in "$cert" -out "$root/fixture.p12" -passout "pass:$password" -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1
+          security create-keychain -p "$password" "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$root/fixture.p12" -k "$keychain" -P "$password" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" >/dev/null
+          sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$cert"
+          certificate_hash=$(openssl x509 -in "$cert" -outform DER | shasum | awk '{print $1}')
+          bundle_id=cn.watchroom.pianike.updatefixture
+          mkdir "$root/installed" "$root/new"
+          make_app() {
+            local version="$1" direction="$2"
+            local app="$root/$direction/PiankeUpdateQA.app"
+            ditto "$seed" "$app"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $bundle_id" "$app/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $version" "$app/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$app/Contents/Info.plist"
+            printf '{"name":"pianke-native-update-qa","version":"%s","main":"fixture.cjs"}\n' "$version" > "$app/Contents/Resources/app/package.json"
+            printf 'module.exports=%s;\n' "$(python3 -c 'import json,os;print(json.dumps(os.environ["PIKE_QA_DIR"]))')" > "$app/Contents/Resources/app/fixture-root.cjs"
+            cat > "$app/Contents/Resources/app/fixture.cjs" <<'JS'
+          const {app,autoUpdater}=require('electron');
+          const {writeFileSync,readFileSync,appendFileSync,mkdirSync}=require('node:fs');
+          const {join}=require('node:path');
+          const {pathToFileURL}=require('node:url');
+          const root=require('./fixture-root.cjs');
+          const profile=join(root,'profile');
+          mkdirSync(profile,{recursive:true});
+          app.setPath('userData',profile);
+          const log=message=>appendFileSync(join(root,'check.log'),message+'\n');
+          const file=join(profile,'existing-watch-list');
+          app.whenReady().then(()=>{
+            const version=app.getVersion();
+            log('launched '+version);
+            if(version==='0.0.2'){
+              if(readFileSync(file,'utf8')!=='fixture-watch-progress')throw Error('Watch progress went missing');
+              log('restarted into 0.0.2 and kept user data');
+              app.quit();
+              return;
+            }
+            writeFileSync(file,'fixture-watch-progress');
+            const target='0.0.2';
+            const feed=join(root,'feed.json');
+            const to={version:target,url:pathToFileURL(join(root,'update.zip')).href,name:target,notes:''};
+            writeFileSync(feed,JSON.stringify({currentRelease:target,releases:[{version:target,updateTo:to}]}),{mode:0o600});
+            autoUpdater.on('error',error=>{log(String(error.stack||error));app.exit(1);});
+            autoUpdater.once('update-not-available',()=>{log('unexpected no update');app.exit(1);});
+            autoUpdater.once('update-downloaded',()=>{log('downloaded and signed candidate accepted');autoUpdater.quitAndInstall();});
+            autoUpdater.setFeedURL({url:pathToFileURL(feed).href,serverType:'json'});
+            autoUpdater.checkForUpdates();
+          }).catch(error=>{log(String(error.stack||error));app.exit(1);});
+          JS
+            codesign --force --sign "$identity" --keychain "$keychain" --timestamp=none -r "designated => identifier \"$bundle_id\" and certificate leaf = H\"$certificate_hash\"" "$app"
+            codesign --verify --strict --deep "$app"
+          }
+          make_app 0.0.1 installed
+          make_app 0.0.2 new
+          ditto -c -k --keepParent "$root/new/PiankeUpdateQA.app" "$root/update.zip"
+          installed="$root/installed/PiankeUpdateQA.app"
+          open -n "$installed"
+          for n in $(seq 1 75); do
+            if grep -Fq 'restarted into 0.0.2 and kept user data' "$root/check.log" 2>/dev/null; then
+              test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$installed/Contents/Info.plist")" = 0.0.2
+              codesign --verify --strict --deep "$installed"
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
