@@ -1,0 +1,95 @@
+name: Build Pianke Mac preview
+on:
+  push:
+    branches: [codex/mac-1-0-44-preview]
+    paths: [.github/workflows/mac-preview.yml]
+permissions:
+  contents: read
+jobs:
+  preview:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+            digest: c12857cc6c401d8f07dcc26fab43c6aabb831971be0284edf88d8f30f5623c5a
+          - arch: x64
+            runner: macos-15-intel
+            digest: 7fde62ae7840963bc3bc984347f848e954a2b57a51a83f521d3a870af5960194
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 12
+    env:
+      ARCH: ${{ matrix.arch }}
+      DIGEST: ${{ matrix.digest }}
+    steps:
+      - name: Assemble preview installer and verify it on macOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/output"
+          seed="$RUNNER_TEMP/seed.zip"
+          staging="$RUNNER_TEMP/staging"
+          base="https://github.com/gxpqaznew/pianke-releases/releases/download"
+          mkdir -p "$out" "$staging"
+          curl -fsSL --retry 3 "$base/v1.0.44-mac-preview/Pianke-Mac-Seed-$ARCH.zip" -o "$seed"
+          printf '%s  %s\n' "$DIGEST" "$seed" | shasum -a 256 -c
+          ditto -x -k "$seed" "$RUNNER_TEMP/unpacked"
+          app="$RUNNER_TEMP/unpacked/片刻.app"
+          pl="$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier cn.watchroom.pianike' "$pl"
+          /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 1.0.44' "$pl"
+          /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString 1.0.44' "$pl"
+          grep -F 'installMacUpdate' "$app/Contents/Resources/app/app-update.cjs"
+          grep -F '1.0.44' "$app/Contents/Resources/app/package.json"
+          while IFS= read -r -d '' item; do
+            codesign --force --sign - "$item"
+          done < <(find "$app/Contents/Frameworks" -type f \( -name '*.dylib' -o -name '*.node' -o -name chrome_crashpad_handler -o -name ShipIt \) -print0)
+          while IFS= read -r -d '' item; do
+            codesign --force --sign - "$item"
+          done < <(find "$app/Contents/Frameworks" -depth \( -name '*.app' -o -name '*.framework' \) -type d -print0)
+          codesign --force --sign - "$app"
+          codesign --verify --strict --deep "$app"
+          ditto "$app" "$staging/片刻.app"
+          pkg="$out/Pianke-Mac-$ARCH-1.0.44-Preview.pkg"
+          pkgbuild --analyze --root "$staging" "$RUNNER_TEMP/component.plist"
+          /usr/libexec/PlistBuddy -c 'Set :0:BundleIsRelocatable false' "$RUNNER_TEMP/component.plist"
+          pkgbuild --root "$staging" --component-plist "$RUNNER_TEMP/component.plist" --identifier cn.watchroom.pianike.pkg --version 1.0.44 --install-location /Applications "$pkg"
+          pkgutil --payload-files "$pkg" > "$RUNNER_TEMP/payload.txt"
+          grep -F '片刻.app/Contents/MacOS/Electron' "$RUNNER_TEMP/payload.txt"
+          previous="$RUNNER_TEMP/previous.pkg"
+          curl -fsSL --retry 3 "$base/v1.0.43/Pianke-macOS-$ARCH.pkg" -o "$previous"
+          sudo installer -pkg "$previous" -target /
+          target="/Applications/片刻.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$target/Contents/Info.plist")" = 1.0.43
+          export WATCHROOM_QA_DIR="$RUNNER_TEMP/pianke-test-profile"
+          mkdir -p "$WATCHROOM_QA_DIR/library"
+          printf '%s\n' '{"kind":"watchroom-mobile","version":1,"state":{"progress":{"preview-fixture":{"status":"waiting","seasonNumber":3,"note":"preserve"}},"customWorks":[],"followedCreators":[],"hiddenCreators":[]},"tasks":[]}' > "$WATCHROOM_QA_DIR/library/watchroom-v1.json"
+          cp "$WATCHROOM_QA_DIR/library/watchroom-v1.json" "$RUNNER_TEMP/expected-profile.json"
+          sudo installer -pkg "$pkg" -target /
+          codesign --verify --strict --deep "$target"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$target/Contents/Info.plist")" = 1.0.44
+          machine="$ARCH"
+          if [[ "$ARCH" == x64 ]]; then machine=x86_64; fi
+          lipo -verify_arch "$machine" "$target/Contents/MacOS/Electron"
+          "$target/Contents/MacOS/Electron" > "$RUNNER_TEMP/preview.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; cat "$RUNNER_TEMP/preview.log"; cat "$WATCHROOM_QA_DIR/qa-runtime.log"' EXIT
+          for n in $(seq 1 30); do
+            kill -0 "$pid" || exit 1
+            if grep -Fq 'load-complete' "$WATCHROOM_QA_DIR/qa-runtime.log" 2>/dev/null; then
+              cmp "$WATCHROOM_QA_DIR/library/watchroom-v1.json" "$RUNNER_TEMP/expected-profile.json"
+              echo "Updated from 1.0.43 to 1.0.44, launched, and preserved the test library"
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+      - name: Save validated PKG
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mac-preview-${{ matrix.arch }}
+          path: ${{ runner.temp }}/output/*.pkg
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
