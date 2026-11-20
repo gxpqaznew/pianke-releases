@@ -85,7 +85,7 @@ jobs:
           }).catch(error=>{log(String(error.stack||error));app.exit(1);});
           JS
             echo "Signing fixture $version"
-            codesign --force --sign "$certificate_hash" --keychain "$keychain" --timestamp=none -r "designated => identifier \"$bundle_id\" and certificate leaf = H\"$certificate_hash\"" "$app"
+            codesign --force --sign "$certificate_hash" --keychain "$keychain" --timestamp=none -r "=designated => identifier \"$bundle_id\" and certificate leaf = H\"$certificate_hash\"" "$app"
             codesign --verify --strict --deep "$app"
           }
           make_app 0.0.1 installed
