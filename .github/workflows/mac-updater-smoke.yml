@@ -32,9 +32,14 @@ jobs:
           openssl pkcs12 -export -inkey "$key" -in "$cert" -out "$root/fixture.p12" -passout "pass:$password" -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1
           security create-keychain -p "$password" "$keychain"
           security unlock-keychain -p "$password" "$keychain"
+          security list-keychains -d user -s "$keychain"
           security import "$root/fixture.p12" -k "$keychain" -P "$password" -T /usr/bin/codesign
+          echo "Setting the test key partition"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" >/dev/null
+          echo "Trusting the test authority on the disposable runner"
           sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$cert"
+          echo "Test signing identities:"
+          security find-identity -v -p codesigning "$keychain"
           certificate_hash=$(openssl x509 -in "$cert" -outform DER | shasum | awk '{print $1}')
           bundle_id=cn.watchroom.pianike.updatefixture
           mkdir "$root/installed" "$root/new"
@@ -79,7 +84,8 @@ jobs:
             autoUpdater.checkForUpdates();
           }).catch(error=>{log(String(error.stack||error));app.exit(1);});
           JS
-            codesign --force --sign "$identity" --keychain "$keychain" --timestamp=none -r "designated => identifier \"$bundle_id\" and certificate leaf = H\"$certificate_hash\"" "$app"
+            echo "Signing fixture $version"
+            codesign --force --sign "$certificate_hash" --keychain "$keychain" --timestamp=none -r "designated => identifier \"$bundle_id\" and certificate leaf = H\"$certificate_hash\"" "$app"
             codesign --verify --strict --deep "$app"
           }
           make_app 0.0.1 installed
