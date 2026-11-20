@@ -66,12 +66,13 @@ jobs:
           mkdir -p "$WATCHROOM_QA_DIR/library"
           printf '%s\n' '{"kind":"watchroom-mobile","version":1,"state":{"progress":{"preview-fixture":{"status":"waiting","seasonNumber":3,"note":"preserve"}},"customWorks":[],"followedCreators":[],"hiddenCreators":[]},"tasks":[]}' > "$WATCHROOM_QA_DIR/library/watchroom-v1.json"
           cp "$WATCHROOM_QA_DIR/library/watchroom-v1.json" "$RUNNER_TEMP/expected-profile.json"
+          xattr -w com.apple.quarantine "0081;$(printf '%x' "$(date +%s)");Pianke preview test;" "$pkg"
           sudo installer -pkg "$pkg" -target /
           codesign --verify --strict --deep "$target"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$target/Contents/Info.plist")" = 1.0.44
           machine="$ARCH"
           if [[ "$ARCH" == x64 ]]; then machine=x86_64; fi
-          lipo -verify_arch "$machine" "$target/Contents/MacOS/Electron"
+          lipo "$target/Contents/MacOS/Electron" -verify_arch "$machine"
           "$target/Contents/MacOS/Electron" > "$RUNNER_TEMP/preview.log" 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true; cat "$RUNNER_TEMP/preview.log"; cat "$WATCHROOM_QA_DIR/qa-runtime.log"' EXIT
