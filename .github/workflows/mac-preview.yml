@@ -136,7 +136,8 @@ jobs:
           security unlock-keychain -p "$keychain_password" "$qa_keychain"
           security list-keychains -d user -s "$qa_keychain"
           security default-keychain -d user -s "$qa_keychain"
-          security add-generic-password -a Watchroom -s 'Watchroom Safe Storage' -w "$(openssl rand -hex 24)" -T "$qa_app" -T "$app/Contents/MacOS/Electron" "$qa_keychain"
+          fixture_key="$(openssl rand -hex 24)"
+          security add-generic-password -a Watchroom -s 'Watchroom Safe Storage' -w "$fixture_key" -T "$qa_app" "$qa_keychain"
           "$qa_app" --remote-debugging-port=9375 > "$RUNNER_TEMP/old.log" 2>&1 &
           old_pid=$!
           trap 'kill "$old_pid" 2>/dev/null || true; cat "$RUNNER_TEMP/old.log"; security delete-keychain "$qa_keychain" 2>/dev/null || true' EXIT
@@ -151,6 +152,10 @@ jobs:
           wait "$old_pid" || true
           mv "$WATCHROOM_QA_DIR/qa-runtime.log" "$RUNNER_TEMP/qa-old-runtime.log"
           sudo installer -pkg "$pkg" -target /
+          # Keep the test encryption key and grant the newly installed test binary access.
+          security delete-generic-password -a Watchroom -s 'Watchroom Safe Storage' "$qa_keychain"
+          security add-generic-password -a Watchroom -s 'Watchroom Safe Storage' -w "$fixture_key" -T "$qa_app" "$qa_keychain"
+          unset fixture_key
           codesign --verify --strict --deep "$target"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$target/Contents/Info.plist")" = 1.0.45
           machine="$ARCH"
