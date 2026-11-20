@@ -76,11 +76,11 @@ jobs:
             const target='0.0.2';
             const feed=join(root,'feed.json');
             const to={version:target,url:pathToFileURL(join(root,'update.zip')).href,name:target,notes:''};
-            writeFileSync(feed,JSON.stringify({currentRelease:target,releases:[{version:target,updateTo:to}]}),{mode:0o600});
+            writeFileSync(feed,JSON.stringify(to),{mode:0o600});
             autoUpdater.on('error',error=>{log(String(error.stack||error));app.exit(1);});
             autoUpdater.once('update-not-available',()=>{log('unexpected no update');app.exit(1);});
             autoUpdater.once('update-downloaded',()=>{log('downloaded and signed candidate accepted');autoUpdater.quitAndInstall();});
-            autoUpdater.setFeedURL({url:pathToFileURL(feed).href,serverType:'json'});
+            autoUpdater.setFeedURL({url:pathToFileURL(feed).href});
             autoUpdater.checkForUpdates();
           }).catch(error=>{log(String(error.stack||error));app.exit(1);});
           JS
@@ -97,6 +97,7 @@ jobs:
             if grep -Fq 'restarted into 0.0.2 and kept user data' "$root/check.log" 2>/dev/null; then
               test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$installed/Contents/Info.plist")" = 0.0.2
               codesign --verify --strict --deep "$installed"
+              cat "$root/check.log"
               exit 0
             fi
             sleep 1
