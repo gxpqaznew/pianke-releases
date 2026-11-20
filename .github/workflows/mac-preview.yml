@@ -140,9 +140,16 @@ jobs:
           "$qa_app" --remote-debugging-port=9375 > "$RUNNER_TEMP/old.log" 2>&1 &
           old_pid=$!
           trap 'kill "$old_pid" 2>/dev/null || true; cat "$RUNNER_TEMP/old.log"; security delete-keychain "$qa_keychain" 2>/dev/null || true' EXIT
+          for n in $(seq 1 30); do
+            kill -0 "$old_pid"
+            if grep -Fq 'load-complete' "$WATCHROOM_QA_DIR/qa-runtime.log" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          grep -Fq 'load-complete' "$WATCHROOM_QA_DIR/qa-runtime.log"
           node "$probe" seed
           kill "$old_pid"
           wait "$old_pid" || true
+          mv "$WATCHROOM_QA_DIR/qa-runtime.log" "$RUNNER_TEMP/qa-old-runtime.log"
           sudo installer -pkg "$pkg" -target /
           codesign --verify --strict --deep "$target"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$target/Contents/Info.plist")" = 1.0.45
