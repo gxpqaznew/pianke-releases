@@ -1,0 +1,27 @@
+name: Verify public Mac installers
+on:
+  push:
+    branches: [codex/mac-installer-audit]
+    paths: [.github/workflows/mac-installer-audit.yml]
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: macos-15-intel
+    timeout-minutes: 10
+    steps:
+      - name: Check release bytes, signature, and Gatekeeper policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          check() {
+            local arch="$1" expected="$2" pkg="$RUNNER_TEMP/Pianke-macOS-$1.pkg"
+            curl --fail --location --retry 3 --silent --show-error "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.43/Pianke-macOS-$arch.pkg" --output "$pkg"
+            printf '%s  %s\n' "$expected" "$pkg" | shasum -a 256 -c
+            pkgutil --payload-files "$pkg" > "$RUNNER_TEMP/$arch-files"
+            grep -F '片刻.app/Contents/MacOS/Electron' "$RUNNER_TEMP/$arch-files"
+            if pkgutil --check-signature "$pkg"; then echo "Signature check status: 0"; else echo "Signature check status: $?"; fi
+            if spctl --assess --type install --verbose=4 "$pkg"; then echo "Gatekeeper check status: 0"; else echo "Gatekeeper check status: $?"; fi
+          }
+          check arm64 40f71ec9ece1c249842be9ef1882384a5049f1221a8d6f8e69952cb797f7f793
+          check x64 ae73b414e64949fcfe582225c6e8265558231ed61aef3493b55cbd2a828bbf27
