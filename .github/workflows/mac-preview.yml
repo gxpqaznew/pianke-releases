@@ -1,0 +1,113 @@
+name: Build empty Pianke Mac preview
+on:
+  push:
+    branches: [codex/mac-empty-preview]
+    paths: [.github/workflows/mac-preview.yml]
+permissions:
+  contents: write
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+            machine: arm64
+          - arch: x64
+            runner: macos-15-intel
+            machine: x86_64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 12
+    env:
+      VERSION: 1.0.48
+      ARCH: ${{ matrix.arch }}
+      MACHINE: ${{ matrix.machine }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check draft input and assemble installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          name="Mac-seed-$ARCH.zip"
+          seed="$RUNNER_TEMP/seed.zip"
+          output="$RUNNER_TEMP/output"
+          mkdir -p "$output"
+          info="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,assets)"
+          test "$(jq -r .isDraft <<< "$info")" = true
+          digest="$(jq -er --arg file "$name" '.assets[]|select(.name==$file and .state=="uploaded")|.digest' <<< "$info")"
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$name" --output "$seed"
+          printf '%s  %s\n' "${digest#sha256:}" "$seed" | shasum -a 256 -c
+          ditto -x -k "$seed" "$RUNNER_TEMP/unpacked"
+          app="$RUNNER_TEMP/unpacked/片刻.app"
+          web="$app/Contents/Resources/app/web"
+          test -f "$web/index.html"
+          ! grep -RE --include='*.js' 'BV[[:alnum:]]{10}([^[:alnum:]]|$)|youtube\.com/watch\?v=[A-Za-z0-9_-]{11}|hongguoduanju\.com/(player/|detail\?series_id=)[0-9]{6,}' "$web"
+          pl="$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier cn.watchroom.pianike' "$pl"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$pl"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$pl"
+          test "$(plutil -extract version raw -o - "$app/Contents/Resources/app/package.json")" = "$VERSION"
+          lipo "$app/Contents/MacOS/Electron" -verify_arch "$MACHINE"
+          while IFS= read -r -d '' item; do codesign --force --sign - "$item"; done < <(
+           find "$app/Contents/Frameworks" -type f \( -name '*.dylib' -o -name '*.node' -o -name chrome_crashpad_handler -o -name ShipIt \) -print0
+          )
+          while IFS= read -r -d '' item; do codesign --force --sign - "$item"; done < <(
+           find "$app/Contents/Frameworks" -depth \( -name '*.app' -o -name '*.framework' \) -type d -print0
+          )
+          codesign --force --sign - "$app"
+          codesign --verify --strict --deep "$app"
+          staged="$RUNNER_TEMP/stage"
+          mkdir -p "$staged"
+          ditto "$app" "$staged/片刻.app"
+          component="$RUNNER_TEMP/component.plist"
+          pkgbuild --analyze --root "$staged" "$component"
+          /usr/libexec/PlistBuddy -c 'Set :0:BundleIsRelocatable false' "$component"
+          pkgbuild --root "$staged" --component-plist "$component" --identifier cn.watchroom.pianike.pkg --version "$VERSION" --install-location /Applications "$output/Pianke-macOS-$ARCH.pkg"
+      - name: Install preview and confirm an empty library
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo installer -pkg "$RUNNER_TEMP/output/Pianke-macOS-$ARCH.pkg" -target /
+          app="/Applications/片刻.app"
+          codesign --verify --strict --deep "$app"
+          export WATCHROOM_QA_DIR="$RUNNER_TEMP/pianke-profile"
+          "$app/Contents/MacOS/Electron" --remote-debugging-port=9376 >"$RUNNER_TEMP/pianke.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; cat "$RUNNER_TEMP/pianke.log"; cat "$WATCHROOM_QA_DIR/qa-runtime.log" 2>/dev/null || true' EXIT
+          for n in $(seq 1 30); do
+            kill -0 "$pid"
+            if grep -q 'load-complete' "$WATCHROOM_QA_DIR/qa-runtime.log" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          grep -q 'load-complete' "$WATCHROOM_QA_DIR/qa-runtime.log"
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          const pages=await (await fetch('http://127.0.0.1:9376/json/list')).json();
+          const page=pages.find(row=>row.type==='page'&&row.url.startsWith('watchroom://app/'));
+          assert(page);
+          const ws=new WebSocket(page.webSocketDebuggerUrl);
+          await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject;});
+          try {
+            const result=await new Promise((resolve,reject)=>{
+              const timer=setTimeout(()=>reject(Error('page check timed out')),5000);
+              ws.onmessage=({data})=>{clearTimeout(timer);resolve(JSON.parse(data));};
+              ws.send(JSON.stringify({id:1,method:'Runtime.evaluate',params:{expression:`new Promise(resolve=>setTimeout(()=>resolve({cards:document.querySelectorAll('.work-card').length,mac:window.Watchroom.platform,empty:document.body.innerText.includes('片单还空着')}),600))`,awaitPromise:true,returnByValue:true}}));
+            });
+            assert.deepEqual(result.result.result.value,{cards:0,mac:'mac',empty:true});
+          } finally {ws.close();}
+          JS
+      - name: Save Mac preview package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pianke-empty-mac-${{ matrix.arch }}
+          path: ${{ runner.temp }}/output/*.pkg
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
