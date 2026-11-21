@@ -1,26 +1,26 @@
 {
-  "tag_name": "v1.0.46",
+  "tag_name": "v1.0.47",
   "draft": false,
   "prerelease": false,
-  "body": "- Windows 和 Android 新增分季剧情回顾。打开作品档案，在「分季剧库」选择一季并展开「剧情回顾」。\n- 回顾可以手写，或交给常用 AI 整理后粘贴预览、保存。支持只有剧情资料的季。\n- 安卓请覆盖安装，或在「我的 → 软件更新」里下载并安装。",
+  "body": "- 片库内置 5 部剧、31 季的多段剧情回顾，打开作品档案即可读取。\n- 已整理《大乾毒士》1–10 季、《国师定大明》1–8 季、《寒门枭雄定天下》1–5 季、《布衣成圣》1–7 季，以及《穿书反派：我截胡天命红颜》第 2 季。\n- 回顾标明整理所依据的剧集版本，文末可打开出处。作品档案显示已经整理了几季，可直接展开最近看过的有回顾的一季。",
   "assets": [
     {
       "name": "Pianke-Android.apk",
-      "size": 1459148,
-      "digest": "sha256:145c4b41406cf292ec2e6b30d3b43d0d0eecd522ce280a842698931e3a9afa26",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.46/Pianke-Android.apk"
+      "size": 1475532,
+      "digest": "sha256:0ec2242d58adf3c2f8a225e9399c0bf5a384d41be8622927a98706b420820cbf",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.47/Pianke-Android.apk"
     },
     {
       "name": "Pianke-Windows-x64-Setup.exe",
-      "size": 150037659,
-      "digest": "sha256:baee7f487bec633186f737e87fe384fed0e24302260664095978279b7445f71b",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.46/Pianke-Windows-x64-Setup.exe"
+      "size": 150053018,
+      "digest": "sha256:c79bf1b1b24d0fc037d91028a48ef018daf4462c340cafb13e717d61dbcef619",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.47/Pianke-Windows-x64-Setup.exe"
     },
     {
       "name": "Pianke-Windows-x64-Portable.zip",
-      "size": 150391762,
-      "digest": "sha256:dfa8c81ac0ba0423576cd6d2864abc3abc96103985a78e342a40008a0813d904",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.46/Pianke-Windows-x64-Portable.zip"
+      "size": 150407144,
+      "digest": "sha256:68836f2809185318403f4af22f17f2fffba3570d466aa6c8b97799ad83050a98",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.47/Pianke-Windows-x64-Portable.zip"
     }
   ]
 }
