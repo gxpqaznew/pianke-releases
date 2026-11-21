@@ -1,26 +1,38 @@
 {
-  "tag_name": "v1.0.47",
+  "tag_name": "v1.0.48",
   "draft": false,
   "prerelease": false,
-  "body": "- 片库内置 5 部剧、31 季的多段剧情回顾，打开作品档案即可读取。\n- 已整理《大乾毒士》1–10 季、《国师定大明》1–8 季、《寒门枭雄定天下》1–5 季、《布衣成圣》1–7 季，以及《穿书反派：我截胡天命红颜》第 2 季。\n- 回顾标明整理所依据的剧集版本，文末可打开出处。作品档案显示已经整理了几季，可直接展开最近看过的有回顾的一季。",
+  "body": "- Windows、Android 和 macOS 同一版本发布。首次安装的片库为空，可添加视频链接或导入自己的备份。\n- 支持分季回顾、个人观看进度和本机片库导入。覆盖安装沿用已有本机档案；迁移原内置目录需使用个人备份。\n- Mac 安装包是未公证测试版，分别提供 Apple 芯片和 Intel 版。适用时需根据 macOS 提示，在「系统设置 → 隐私与安全性」单独确认打开。",
   "assets": [
     {
       "name": "Pianke-Android.apk",
-      "size": 1475532,
-      "digest": "sha256:0ec2242d58adf3c2f8a225e9399c0bf5a384d41be8622927a98706b420820cbf",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.47/Pianke-Android.apk"
+      "size": 1328076,
+      "digest": "sha256:459640c208a0cd7f9516b228751bc91bb7d6a8db17a4321c2cc01e7c8bd41207",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.48/Pianke-Android.apk"
     },
     {
       "name": "Pianke-Windows-x64-Setup.exe",
-      "size": 150053018,
-      "digest": "sha256:c79bf1b1b24d0fc037d91028a48ef018daf4462c340cafb13e717d61dbcef619",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.47/Pianke-Windows-x64-Setup.exe"
+      "size": 149907267,
+      "digest": "sha256:af1e1081766f427aa67f0497a8beb5b8b180ffa7d30357360cfe8fee6aa5bc40",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.48/Pianke-Windows-x64-Setup.exe"
     },
     {
       "name": "Pianke-Windows-x64-Portable.zip",
-      "size": 150407144,
-      "digest": "sha256:68836f2809185318403f4af22f17f2fffba3570d466aa6c8b97799ad83050a98",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.47/Pianke-Windows-x64-Portable.zip"
+      "size": 150261399,
+      "digest": "sha256:222b52b10b1bf538146a6dab82e044561a58aa849623fb0e8a20d71c82958249",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.48/Pianke-Windows-x64-Portable.zip"
+    },
+    {
+      "name": "Pianke-macOS-arm64.pkg",
+      "size": 119969413,
+      "digest": "sha256:c721a9f4812bfe8e49d28da1b33a0cbae4c0627256f437f2c91f6d5f900c0542",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.48/Pianke-macOS-arm64.pkg"
+    },
+    {
+      "name": "Pianke-macOS-x64.pkg",
+      "size": 123802512,
+      "digest": "sha256:39e4dc8ac3e39955b4d4a885bcfc2d8481f8e08721fab457db6d2ad6e2b97585",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.48/Pianke-macOS-x64.pkg"
     }
   ]
 }
