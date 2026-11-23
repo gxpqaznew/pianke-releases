@@ -48,6 +48,7 @@ jobs:
           app="$RUNNER_TEMP/unpacked/片刻.app"
           web="$app/Contents/Resources/app/web"
           test -f "$web/index.html"
+          jq -e '(.google.id | test("^[0-9]+-[A-Za-z0-9_-]+[.]apps[.]googleusercontent[.]com$")) and ((.google | keys) == ["id"]) and ((keys) == ["google"])' "$app/Contents/Resources/app/drive-clients.json"
           ! grep -RE --include='*.js' 'BV[[:alnum:]]{10}([^[:alnum:]]|$)|youtube\.com/watch\?v=[A-Za-z0-9_-]{11}|hongguoduanju\.com/(player/|detail\?series_id=)[0-9]{6,}' "$web"
           pl="$app/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier cn.watchroom.pianike' "$pl"
