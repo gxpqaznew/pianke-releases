@@ -1,0 +1,40 @@
+name: Stage verified Mac installers
+on:
+  push:
+    branches: [codex/mac-empty-preview]
+    paths: [.github/workflows/stage-mac-installers.yml]
+permissions:
+  actions: read
+  contents: write
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v1.0.52
+      BUILD_RUN: "45548676821"
+    steps:
+      - name: Stage the installers from the successful Mac verification run
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh run view "$BUILD_RUN" --repo "$GITHUB_REPOSITORY" --json conclusion --jq .conclusion)" = success
+          test "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true
+          gh run download "$BUILD_RUN" --repo "$GITHUB_REPOSITORY" --pattern 'Pianke-empty-mac-*'
+          check_hash() {
+            local name="$1" digest="$2"
+            local actual
+            actual="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets | jq -r --arg name "$name" '.assets[]|select(.name==$name and .state=="uploaded")|.digest')"
+            test "$actual" = "$digest"
+          }
+          for arch in arm64 x64; do
+            name="Pianke-macOS-$arch.pkg"
+            file="Pianke-empty-mac-$arch/$name"
+            test -s "$file"
+            digest="sha256:$(sha256sum "$file" | cut -d ' ' -f1)"
+            if ! check_hash "$name" "$digest"; then
+              gh release upload "$TAG" "$file" --repo "$GITHUB_REPOSITORY" || check_hash "$name" "$digest"
+            fi
+            check_hash "$name" "$digest"
+          done
