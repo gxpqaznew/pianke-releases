@@ -1,38 +1,38 @@
 {
-  "tag_name": "v1.0.53",
+  "tag_name": "v1.0.54",
   "draft": false,
   "prerelease": false,
-  "body": "## 片刻 1.0.53\n\n- 神农的剧情排雷新增七个题材分类。后宫、言情、权谋、玄幻、悬疑、都市与通用项均可跨类组合，也能自定义。\n- 分类切换时会保留已选毒点，并显示每类的已选数量。原有核查记录仍可打开，结果可识别题材分类。\n- 公开安装包初次启动为空片库。macOS 提供 Apple 芯片和 Intel 的未公证测试安装包。",
+  "body": "## 片刻 1.0.54\n\n- 追剧片单可按添加时间、名称拼音和最近修改的观看记录排序，也保留待看新季优先。排序选择会记在当前设备。\n- 新加入片单会记录添加时间。旧记录缺少日期时，按添加时间排序将排在已知日期之后。\n- Windows、Android 和两种 Mac 安装包同版发布，公开包初次启动为空片库。Mac 提供未公证测试安装包。",
   "assets": [
     {
       "name": "Pianke-Android.apk",
       "size": 2819251,
-      "digest": "sha256:2f8cdc7f5f256e7762b3d1534aeacb170cc0937fd29343ca945d887686b69a88",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.53/Pianke-Android.apk"
+      "digest": "sha256:c426802904949ae50528a55ed192c2c47868f1172ba8bd8e66eee248562abc4b",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.54/Pianke-Android.apk"
     },
     {
       "name": "Pianke-Windows-x64-Setup.exe",
-      "size": 149922967,
-      "digest": "sha256:51cb5ca37ad0b5526b458352fbb2d5391e93651a941896737df6aee989678e43",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.53/Pianke-Windows-x64-Setup.exe"
+      "size": 149924245,
+      "digest": "sha256:d139c411e295ca9253988efe679740be032cd379f014550f6e77e1562af51c20",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.54/Pianke-Windows-x64-Setup.exe"
     },
     {
       "name": "Pianke-Windows-x64-Portable.zip",
-      "size": 150277264,
-      "digest": "sha256:c637d495468a45fd77001a0781c45c8fcc533d4a08754b7cbfdfb48952338833",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.53/Pianke-Windows-x64-Portable.zip"
+      "size": 150278550,
+      "digest": "sha256:ccd2cb9d1214df1e8b85c47f83e8bad392b3b3ec294a998997a2d25e169e9678",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.54/Pianke-Windows-x64-Portable.zip"
     },
     {
       "name": "Pianke-macOS-arm64.pkg",
-      "size": 119984018,
-      "digest": "sha256:1cac245d1688a70e11c35d08bf7ca8ba27f1d6b472b5d85dcd6a054a8d09f9d5",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.53/Pianke-macOS-arm64.pkg"
+      "size": 119984213,
+      "digest": "sha256:8ff7b135d1e48ee84955a477f630ad41100000e73a0797dc2527331bc24e55d3",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.54/Pianke-macOS-arm64.pkg"
     },
     {
       "name": "Pianke-macOS-x64.pkg",
-      "size": 123831808,
-      "digest": "sha256:6961422570c586d5dc3d108cff1c7964305015df3ded0e6a246b75d4565bc4a6",
-      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.53/Pianke-macOS-x64.pkg"
+      "size": 123832691,
+      "digest": "sha256:ed9dd14edfb3175e4445b4b32863484bc2cd04e40c4680a10156451c2418e090",
+      "browser_download_url": "https://github.com/gxpqaznew/pianke-releases/releases/download/v1.0.54/Pianke-macOS-x64.pkg"
     }
   ]
 }
