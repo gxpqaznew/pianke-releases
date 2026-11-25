@@ -99,9 +99,9 @@ jobs:
             const result=await new Promise((resolve,reject)=>{
               const timer=setTimeout(()=>reject(Error('page check timed out')),5000);
               ws.onmessage=({data})=>{clearTimeout(timer);resolve(JSON.parse(data));};
-              ws.send(JSON.stringify({id:1,method:'Runtime.evaluate',params:{expression:`new Promise(resolve=>setTimeout(()=>resolve({cards:document.querySelectorAll('.work-card').length,mac:window.Watchroom.platform,empty:document.body.innerText.includes('片单还空着')}),600))`,awaitPromise:true,returnByValue:true}}));
+              ws.send(JSON.stringify({id:1,method:'Runtime.evaluate',params:{expression:`new Promise(resolve=>setTimeout(()=>resolve({cards:document.querySelectorAll('.work-card').length,mac:window.Watchroom.platform,empty:document.body.innerText.includes('片单还空着'),shennong:[...document.querySelectorAll('nav button')].some(button=>button.textContent.trim()==='神农')}),600))`,awaitPromise:true,returnByValue:true}}));
             });
-            assert.deepEqual(result.result.result.value,{cards:0,mac:'mac',empty:true});
+            assert.deepEqual(result.result.result.value,{cards:0,mac:'mac',empty:true,shennong:true});
           } finally {ws.close();}
           JS
       - name: Save Mac preview package
