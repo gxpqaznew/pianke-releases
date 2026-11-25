@@ -20,7 +20,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 12
     env:
-      VERSION: 1.0.52
+      VERSION: 1.0.53
       ARCH: ${{ matrix.arch }}
       MACHINE: ${{ matrix.machine }}
     steps:
@@ -99,9 +99,9 @@ jobs:
             const result=await new Promise((resolve,reject)=>{
               const timer=setTimeout(()=>reject(Error('page check timed out')),5000);
               ws.onmessage=({data})=>{clearTimeout(timer);resolve(JSON.parse(data));};
-              ws.send(JSON.stringify({id:1,method:'Runtime.evaluate',params:{expression:`new Promise(resolve=>setTimeout(()=>resolve({cards:document.querySelectorAll('.work-card').length,mac:window.Watchroom.platform,empty:document.body.innerText.includes('片单还空着'),shennong:[...document.querySelectorAll('nav button')].some(button=>button.textContent.trim()==='神农')}),600))`,awaitPromise:true,returnByValue:true}}));
+              ws.send(JSON.stringify({id:1,method:'Runtime.evaluate',params:{expression:`(async()=>{await new Promise(resolve=>setTimeout(resolve,600));const before={cards:document.querySelectorAll('.work-card').length,mac:window.Watchroom.platform,empty:document.body.innerText.includes('片单还空着')};[...document.querySelectorAll('nav button')].find(button=>button.textContent.trim()==='神农').click();await new Promise(resolve=>setTimeout(resolve,150));return {...before,categories:document.querySelectorAll('.shennong-categories button').length};})()`,awaitPromise:true,returnByValue:true}}));
             });
-            assert.deepEqual(result.result.result.value,{cards:0,mac:'mac',empty:true,shennong:true});
+            assert.deepEqual(result.result.result.value,{cards:0,mac:'mac',empty:true,categories:7});
           } finally {ws.close();}
           JS
       - name: Save Mac preview package
@@ -112,3 +112,18 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 3
+      - name: Stage verified installer in the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          name="Pianke-macOS-$ARCH.pkg"
+          file="$RUNNER_TEMP/output/$name"
+          test "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true
+          digest="sha256:$(shasum -a 256 "$file" | cut -d ' ' -f1)"
+          gh release upload "$tag" "$file" --repo "$GITHUB_REPOSITORY"
+          actual="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets | jq -er --arg name "$name" '.assets[]|select(.name==$name and .state=="uploaded")|.digest')"
+          test "$actual" = "$digest"
+          printf '%s  %s\n' "$digest" "$name"
